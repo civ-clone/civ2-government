@@ -9,7 +9,10 @@ under `civ2-government:` ids, with Civ2's numbers from OpenCiv2's reconstruction
 - **Choosing:** Despotism always; each other government once its advance is known (`civ_can_choose_government`):
   Monarchy, Communism, Fundamentalism, The Republic, Democracy. Anarchy is never offered.
 - **Revolution:** Anarchy lasts until the next turn that is a multiple of 4, 1 to 4 turns; after a Democracy falls to
-  its cities' disorder, one such turn more (`civ_turn_update_diplomacy`). Then the player chooses.
+  its cities' disorder, one such turn more (`civ_turn_update_diplomacy`). Then the player chooses. Revolutions are
+  saved under `civ2-government:revolution`; the `civ2-government:player/revolution-terms` rule (`RevolutionTerms`)
+  names that key and Anarchy, so code outside this package, such as a computer player, can start and finish them
+  through `base-government-change`.
 - **Tables for the city rules** (they apply them with the `base-government-*` mechanisms):
   - `unitSupport`: `freeUnits(government, citySize)` (city size under Anarchy and Despotism; @COSMIC's 3, 3 and 8
     under Monarchy, Communism and Fundamentalism; none under the Republic and Democracy), `productionPerUnit` and
