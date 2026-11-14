@@ -9,7 +9,9 @@ import {
 } from '../Governments';
 import { ChooseGovernment, Revolution } from '../PlayerActions';
 import {
+  REVOLUTION,
   chooseGovernment,
+  pendingRevolution,
   revolution,
   turnsUntilChoice,
 } from '../lib/revolution';
@@ -24,7 +26,13 @@ import MonarchyAdvance from '@civ-clone/base-science-advance-monarchy/Monarchy';
 import Player from '@civ-clone/core-player/Player';
 import PlayerResearch from '@civ-clone/core-science/PlayerResearch';
 import TheRepublic from '@civ-clone/base-science-advance-therepublic/TheRepublic';
+import action from '../Rules/Player/action';
+import availability from '../Rules/Governments/availability';
 import { expect } from 'chai';
+import { gameForLoad } from '@civ-clone/core-save-game/gameForLoad';
+import { hydrate } from '@civ-clone/core-save-game/hydrate';
+import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
+import { save } from '@civ-clone/core-save-game/save';
 import register from '../registerRules';
 import { turnsToNextFourth } from '../Rules/Player/anarchy-duration';
 
@@ -150,5 +158,49 @@ describe('revolution', (): void => {
     expect(
       turnsUntilChoice(playerGovernment, game.pendingEffects, game.turn)
     ).equal(6);
+  });
+
+  it('keeps a revolution across a save and load', (): void => {
+    const { game, player, playerGovernment } = setUp();
+
+    revolution(playerGovernment, game.pendingEffects, game.rules, game.turn);
+    game.turn.increment();
+
+    game.engine.registerPlugins({ '@civ-clone/civ2-government': '0.1.0' });
+    registerClasses(game);
+
+    const loaded = gameForLoad({
+      availableGovernments: game.availableGovernments,
+      classes: game.classes,
+      engine: game.engine,
+      rules: new (game.rules.constructor as any)(),
+    });
+
+    loaded.rules.register(
+      ...action(loaded.playerGovernments, loaded.pendingEffects, loaded.turn),
+      ...availability(loaded.playerResearch)
+    );
+
+    hydrate(save(game, { name: 'anarchy' }), loaded);
+
+    const [restored] = loaded.playerGovernments
+      .entries()
+      .filter((candidate) => candidate.player().id() === player.id());
+
+    // Started on turn 0: Anarchy until turn 4.
+    expect(restored.is(Anarchy)).true;
+    expect(pendingRevolution(restored, loaded.pendingEffects)?.handler()).equal(
+      REVOLUTION
+    );
+    expect(
+      turnsUntilChoice(restored, loaded.pendingEffects, loaded.turn)
+    ).equal(3);
+
+    [2, 3, 4].forEach(() => loaded.turn.increment());
+
+    chooseGovernment(restored, Despotism, loaded.pendingEffects, loaded.turn);
+
+    expect(restored.is(Despotism)).true;
+    expect(pendingRevolution(restored, loaded.pendingEffects)).null;
   });
 });
