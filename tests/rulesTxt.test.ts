@@ -1,7 +1,10 @@
+import * as Governments from '../Governments';
 import {
   readCosmic,
   readGovernments,
+  toSlug,
 } from '@civ-clone/civ2-asset-extractor/rules';
+import { governments as order } from '@civ-clone/civ2-rules/data/governments';
 import { describe, it } from 'mocha';
 import { expect } from 'chai';
 import { freeUnits, settlerFood } from '../unitSupport';
@@ -32,8 +35,20 @@ const under = (Type: typeof Government): PlayerGovernment => {
 (path ? describe : describe.skip)('RULES.TXT', (): void => {
   const rules = path ? readFileSync(join(path, 'RULES.TXT'), 'latin1') : '';
 
-  it('@GOVERNMENTS: 7 rows, one per government', (): void => {
-    expect(readGovernments(rules).length === 7).true;
+  it('@GOVERNMENTS: 7 rows, one per government, in the order the classes are indexed by', (): void => {
+    const rows = readGovernments(rules);
+
+    expect(rows.length === 7).true;
+    // Compared as booleans, so a failure names a row, never the file's text.
+    rows.forEach((row, index): void => {
+      const slug = toSlug(row.name).replace(/-/g, '').replace(/^the/, ''),
+        Type = (Governments as Record<string, { name: string }>)[order[index]];
+
+      expect(
+        Type !== undefined && slug === Type.name.toLowerCase(),
+        `row ${index + 1}`
+      ).true;
+    });
   });
 
   it('@COSMIC: the free units and settler food', (): void => {

@@ -30,8 +30,9 @@ const citySize: FreeUnits = (size: number): number => size,
 /**
  * Free units per city: as many as the city's size under Anarchy and Despotism, @COSMIC's numbers under Monarchy,
  * Communism and Fundamentalism (3, 3 and 8: the file's 10 is clamped to 8), and none under the Republic and Democracy.
- * Under Fundamentalism, units of a kind marked free of it (Fanatics) cost nothing at all and don't count: that is the
- * unit package's mark, for the city rules to exempt.
+ * Under Fundamentalism, units of a kind marked free of it (Fanatics) are never charged shields, but still take up one
+ * of the 8 free places (`city_count_unit_support` counts every unit before it checks the mark): that is the unit
+ * package's mark, for the city rules to apply.
  */
 export const freeUnitsTable: [typeof Government, FreeUnits][] = [
   [Anarchy, citySize],
