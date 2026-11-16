@@ -80,17 +80,23 @@ export const revolution = (
     cause
   );
 
-/** Finish a revolution whose Anarchy is over, by choosing one of the available governments. */
+/**
+ * Finish a revolution whose Anarchy is over, by choosing one of the available governments. The choice is recorded
+ * with the game's rules (`ruleRegistry`), so a person who starts another revolution in the same turn chooses again with
+ * no Anarchy (`Rules/Player/may-rechoose`).
+ */
 export const chooseGovernment = (
   playerGovernment: PlayerGovernment,
   GovernmentType: typeof Government,
   pendingEffects: PendingEffectRegistry = pendingEffectRegistryInstance,
-  turn: Turn = turnInstance
+  turn: Turn = turnInstance,
+  ruleRegistry: RuleRegistry = ruleRegistryInstance
 ): void =>
   chooseGovernmentFor(
     REVOLUTION,
     playerGovernment,
     GovernmentType,
     pendingEffects,
-    turn
+    turn,
+    ruleRegistry
   );
