@@ -26,11 +26,12 @@ under `civ2-government:` ids, with Civ2's numbers from OpenCiv2's reconstruction
   `revolution` in that turn would skip Anarchy.) The original asks only a person; here every player's client is told,
   and decides.
 - **A change of government** (`civ_set_government`), only when the government actually changes (the last one seen is
-  kept for each player; not saved, so a player's first change after a load counts as one):
+  kept for each player, and filled in at each turn's start for a player from a loaded game):
   - entering Anarchy, or any change by a computer player, ends every other player's vendetta against that player
     (civ2-diplomacy's `clearVendettasAgainst`);
   - a person's cities building Fanatics switch to Riflemen, shields kept, under any government but Fundamentalism,
-    whether or not the city could choose Riflemen, as in the original.
+    whether or not the city could choose Riflemen, as in the original. The change is measured from what the city had at
+    the turn's start, as any change of production is, so changing back later in the turn gets that progress back.
 - **Tables for the city rules** (they apply them with the `base-government-*` mechanisms):
   - `unitSupport`: `freeUnits(government, citySize)` (city size under Anarchy and Despotism; @COSMIC's 3, 3 and 8
     under Monarchy, Communism and Fundamentalism; none under the Republic and Democracy), `productionPerUnit` and
@@ -50,3 +51,8 @@ under `civ2-government:` ids, with Civ2's numbers from OpenCiv2's reconstruction
 ## Not here yet
 
 - The tutorial's Republic hint, which skips the offer of the Republic below Communism.
+
+## Differences from the original
+
+- Accepting a revolution offer in the turn you chose a government gives the full Anarchy; the original lets you choose
+  again at once (its "chose this turn" flag survives the offer, so Revolution reopens the choice out of Anarchy).

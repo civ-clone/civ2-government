@@ -17,6 +17,16 @@ import { describe, it } from 'mocha';
 import AIClient from '@civ-clone/core-ai-client/AIClient';
 import Advance from '@civ-clone/core-science/Advance';
 import AdvanceRegistry from '@civ-clone/core-science/AdvanceRegistry';
+import AvailableCityBuildItemsRegistry from '@civ-clone/core-city-build/AvailableCityBuildItemsRegistry';
+import Build from '@civ-clone/core-city-build/Rules/Build';
+import { IBuildable as Buildable } from '@civ-clone/core-city-build/Buildable';
+import { buildCosts } from '@civ-clone/core-city-build/Rules/BuildCost';
+import Criterion from '@civ-clone/core-rule/Criterion';
+import Effect from '@civ-clone/core-rule/Effect';
+import PlayerGovernmentRegistry from '@civ-clone/core-government/PlayerGovernmentRegistry';
+import ProductionChanged from '@civ-clone/core-city-build/Rules/ProductionChanged';
+import TurnStart from '@civ-clone/core-player/Rules/TurnStart';
+import Yield from '@civ-clone/core-yield/Yield';
 import City from '@civ-clone/core-city/City';
 import CityBuild from '@civ-clone/core-city-build/CityBuild';
 import CityBuildRegistry from '@civ-clone/core-city-build/CityBuildRegistry';
@@ -390,11 +400,6 @@ describe('a change of government', (): void => {
         build: (Item: unknown): void => {
           built.push(Item);
         },
-        _building: null as { item: () => unknown } | null,
-        // As `CityBuild#reprice`: prices whatever is being built, which here says what that is.
-        reprice(): void {
-          built.push(['repriced', this._building?.item()]);
-        },
       };
 
     setup.cities.push(city);
@@ -435,14 +440,6 @@ describe('a change of government', (): void => {
         return built;
       })()
     ).eql([]);
-  });
-
-  it("gives Riflemen to a city that couldn't choose them, as the original does", (): void => {
-    const { built, playerGovernment } = withBuilds('person', Fanatic, false);
-
-    playerGovernment.set(new Anarchy());
-
-    expect(built).eql([['repriced', Rifleman]]);
   });
 
   it('acts only on an actual change of government', (): void => {
@@ -493,5 +490,168 @@ describe('a change of government', (): void => {
     playerGovernment.set(new Anarchy());
 
     expect(built).eql([]);
+  });
+});
+
+describe('a change of government, with a real build and after a load', (): void => {
+  class Temple {
+    static build(): null {
+      return null;
+    }
+  }
+
+  const setUp = (riflemenAvailable: boolean) => {
+    const ruleRegistry = new RuleRegistry(),
+      clientRegistry = new ClientRegistry(),
+      interactionRegistry = new InteractionRegistry(),
+      playerGovernmentRegistry = new PlayerGovernmentRegistry(),
+      availableItems = new AvailableCityBuildItemsRegistry(),
+      player = new Player(ruleRegistry),
+      city = { player: () => player } as unknown as City,
+      cityBuild = new CityBuild(city, availableItems, ruleRegistry),
+      category = (Item: unknown): string =>
+        Item === Temple ? 'improvement' : 'unit';
+
+    availableItems.register(
+      Temple as unknown as Buildable,
+      Fanatic as unknown as Buildable,
+      Rifleman as unknown as Buildable
+    );
+    clientRegistry.register(new Client(player));
+
+    ruleRegistry.register(
+      ...buildCosts([
+        [Temple as unknown as Buildable, 30],
+        [Fanatic as unknown as Buildable, 20],
+        [Rifleman as unknown as Buildable, 20],
+      ]),
+      new Build(
+        new Criterion((city: City, Item: unknown) => Item === Rifleman),
+        new Effect(() => new Criterion(() => riflemenAvailable))
+      ),
+      // A stand-in for civ2-city's change penalty: half the progress for a change between an improvement and a unit,
+      //  none for a change within one category.
+      new ProductionChanged(
+        new Effect(
+          (
+            build: CityBuild,
+            from: unknown,
+            to: unknown,
+            progress: number
+          ): number =>
+            category(from) === category(to)
+              ? progress
+              : Math.floor(progress / 2)
+        )
+      )
+    );
+
+    const playerGovernment = new PlayerGovernment(
+      player,
+      undefined,
+      ruleRegistry
+    );
+
+    playerGovernmentRegistry.register(playerGovernment);
+
+    const register = (): void =>
+      ruleRegistry.register(
+        ...governmentChanged(
+          new Engine(),
+          new PlayerWorldRegistry(),
+          interactionRegistry,
+          clientRegistry,
+          {
+            getByPlayer: (owner: Player): City[] =>
+              owner === player ? [city] : [],
+          } as unknown as CityRegistry,
+          {
+            getBy: (key: string, of: City): CityBuild[] =>
+              of === city ? [cityBuild] : [],
+          } as unknown as CityBuildRegistry,
+          playerGovernmentRegistry
+        )
+      );
+
+    return {
+      cityBuild,
+      clientRegistry,
+      interactionRegistry,
+      player,
+      playerGovernment,
+      register,
+      ruleRegistry,
+    };
+  };
+
+  [true, false].forEach((riflemenAvailable: boolean): void =>
+    it(`switches to Riflemen keeping the turn's starting point, so a change back is refunded (Riflemen ${
+      riflemenAvailable ? '' : 'not '
+    }available)`, (): void => {
+      const { cityBuild, playerGovernment, register } =
+        setUp(riflemenAvailable);
+
+      register();
+      playerGovernment.set(new Fundamentalism());
+
+      // The turn starts with 20 towards a Temple; changing to Fanatics costs half.
+      cityBuild.build(Temple as unknown as Buildable);
+      cityBuild.add(new Yield(20));
+      cityBuild.build(Fanatic as unknown as Buildable);
+      expect(cityBuild.progress().value()).equal(10);
+
+      (cityBuild as unknown as { _queueDropped: unknown[] })._queueDropped = [
+        Temple,
+      ];
+
+      playerGovernment.set(new Anarchy());
+
+      expect(cityBuild.building()?.item()).equal(Rifleman);
+      expect(cityBuild.cost().value()).equal(20);
+      expect(cityBuild.progress().value()).equal(10);
+      expect(cityBuild.queueDropped()).eql([]);
+
+      // Back to the Temple the turn started with: the 20 it had then.
+      cityBuild.build(Temple as unknown as Buildable);
+      expect(cityBuild.progress().value()).equal(20);
+    })
+  );
+
+  it("counts setting a loaded player's government again as no change, once its turn has started", (): void => {
+    const loaded = setUp(true),
+      control = setUp(true);
+
+    [loaded, control].forEach((setup) => {
+      // The government a save restored: set before this game's rules are registered.
+      setup.playerGovernment.set(new Monarchy());
+      setup.clientRegistry.unregister(
+        ...setup.clientRegistry.getBy('player', setup.player)
+      );
+      setup.clientRegistry.register(new AIClient(setup.player));
+      setup.register();
+    });
+
+    const other = new Player(loaded.ruleRegistry),
+      vendetta = new Vendetta(other, loaded.player, loaded.ruleRegistry),
+      controlVendetta = new Vendetta(
+        new Player(control.ruleRegistry),
+        control.player,
+        control.ruleRegistry
+      );
+
+    loaded.interactionRegistry.register(vendetta);
+    control.interactionRegistry.register(controlVendetta);
+
+    loaded.ruleRegistry.process(TurnStart, loaded.player);
+
+    loaded.playerGovernment.set(new Monarchy());
+    control.playerGovernment.set(new Monarchy());
+
+    expect(vendetta.active()).true;
+    // Without a turn start to see the loaded government, the same government counts as a change.
+    expect(controlVendetta.active()).false;
+
+    loaded.playerGovernment.set(new Republic());
+    expect(vendetta.active()).false;
   });
 });

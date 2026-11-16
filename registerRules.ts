@@ -31,7 +31,8 @@ export const register = (game: Game): void => {
       game.interactions,
       game.clients,
       game.cities,
-      game.cityBuilds
+      game.cityBuilds,
+      game.playerGovernments
     ),
     ...mayRechoose(game.clients),
     ...governmentAvailable(game.playerGovernments),
