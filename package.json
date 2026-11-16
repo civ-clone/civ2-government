@@ -54,7 +54,7 @@
     "@civ-clone/base-science-advance-therepublic": "^0.1.0",
     "@civ-clone/base-unit-fanatic": "^0.1.1",
     "@civ-clone/base-unit-rifleman": "^0.1.0",
-    "@civ-clone/civ2-diplomacy": "github:civ-clone/civ2-diplomacy#feat/m2d",
+    "@civ-clone/civ2-diplomacy": "github:civ-clone/civ2-diplomacy",
     "@civ-clone/civ2-rules": "github:civ-clone/civ2-rules",
     "@civ-clone/core-city": "^0.1.25",
     "@civ-clone/core-city-build": "^0.1.23",
