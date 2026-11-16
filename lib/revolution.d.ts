@@ -44,10 +44,27 @@ export declare const revolution: (
   turn?: Turn,
   cause?: RevolutionCause
 ) => void;
-/** Finish a revolution whose Anarchy is over, by choosing one of the available governments. */
+/**
+ * Accept the offer of a revolution made on discovering a government's advance (`player:government:available`,
+ * `Rules/Research/complete`). It always starts Anarchy, even in the turn a government was chosen: the original sets
+ * Anarchy directly (OpenCiv2 `src/auto/civ.cpp` `civ_advance_gov_prompts`, richardpenman/civ2@e39fe7b), never through
+ * the menu's re-choice. So the record of this turn's choice is dropped first, and the revolution is an ordinary one.
+ */
+export declare const acceptRevolutionOffer: (
+  playerGovernment: PlayerGovernment,
+  pendingEffects?: PendingEffectRegistry,
+  ruleRegistry?: RuleRegistry,
+  turn?: Turn
+) => void;
+/**
+ * Finish a revolution whose Anarchy is over, by choosing one of the available governments. The choice is recorded
+ * with the game's rules (`ruleRegistry`), so a person who starts another revolution in the same turn chooses again with
+ * no Anarchy (`Rules/Player/may-rechoose`).
+ */
 export declare const chooseGovernment: (
   playerGovernment: PlayerGovernment,
   GovernmentType: typeof Government,
   pendingEffects?: PendingEffectRegistry,
-  turn?: Turn
+  turn?: Turn,
+  ruleRegistry?: RuleRegistry
 ) => void;

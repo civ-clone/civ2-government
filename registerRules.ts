@@ -3,7 +3,10 @@ import added from './Rules/Player/added';
 import anarchyDuration from './Rules/Player/anarchy-duration';
 import availability from './Requirements';
 import { deriveAvailabilityRules } from './Rules/Governments/availability';
+import governmentAvailable from './Rules/Governments/available';
 import governmentChanged from './Rules/Player/government-changed';
+import mayRechoose from './Rules/Player/may-rechoose';
+import researchComplete from './Rules/Research/complete';
 import revolutionTerms from './Rules/Player/revolution-terms';
 import { Game, defaultGame } from '@civ-clone/core-game';
 
@@ -21,7 +24,25 @@ export const register = (game: Game): void => {
     ...availability
   );
 
-  game.rules.register(...governmentChanged(game.engine, game.playerWorlds));
+  game.rules.register(
+    ...governmentChanged(
+      game.engine,
+      game.playerWorlds,
+      game.interactions,
+      game.clients,
+      game.cities,
+      game.cityBuilds,
+      game.playerGovernments
+    ),
+    ...mayRechoose(game.clients),
+    ...governmentAvailable(game.playerGovernments),
+    ...researchComplete(
+      game.playerGovernments,
+      game.pendingEffects,
+      game.rules,
+      game.engine
+    )
+  );
 
   // Last, so no other rule moves in the order rules run.
   game.rules.register(...revolutionTerms());

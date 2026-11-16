@@ -23,6 +23,7 @@ import { Anarchy } from '../Governments';
 import Government from '@civ-clone/core-government/Government';
 import PlayerGovernment from '@civ-clone/core-government/PlayerGovernment';
 import { RevolutionCause } from '@civ-clone/base-government-change/Rules/AnarchyDuration';
+import { rechoiceKey } from '@civ-clone/base-government-change/lib/rechoice';
 
 // The revolution, on base-government-change, with this package's save key and Anarchy.
 
@@ -80,17 +81,48 @@ export const revolution = (
     cause
   );
 
-/** Finish a revolution whose Anarchy is over, by choosing one of the available governments. */
+/**
+ * Accept the offer of a revolution made on discovering a government's advance (`player:government:available`,
+ * `Rules/Research/complete`). It always starts Anarchy, even in the turn a government was chosen: the original sets
+ * Anarchy directly (OpenCiv2 `src/auto/civ.cpp` `civ_advance_gov_prompts`, richardpenman/civ2@e39fe7b), never through
+ * the menu's re-choice. So the record of this turn's choice is dropped first, and the revolution is an ordinary one.
+ */
+export const acceptRevolutionOffer = (
+  playerGovernment: PlayerGovernment,
+  pendingEffects: PendingEffectRegistry = pendingEffectRegistryInstance,
+  ruleRegistry: RuleRegistry = ruleRegistryInstance,
+  turn: Turn = turnInstance
+): void => {
+  pendingEffects
+    .getByTarget(playerGovernment)
+    .filter(
+      (pendingEffect: PendingEffect): boolean =>
+        pendingEffect.handler() === rechoiceKey(REVOLUTION)
+    )
+    .forEach((pendingEffect: PendingEffect): void =>
+      pendingEffects.unregister(pendingEffect)
+    );
+
+  revolution(playerGovernment, pendingEffects, ruleRegistry, turn, 'chosen');
+};
+
+/**
+ * Finish a revolution whose Anarchy is over, by choosing one of the available governments. The choice is recorded
+ * with the game's rules (`ruleRegistry`), so a person who starts another revolution in the same turn chooses again with
+ * no Anarchy (`Rules/Player/may-rechoose`).
+ */
 export const chooseGovernment = (
   playerGovernment: PlayerGovernment,
   GovernmentType: typeof Government,
   pendingEffects: PendingEffectRegistry = pendingEffectRegistryInstance,
-  turn: Turn = turnInstance
+  turn: Turn = turnInstance,
+  ruleRegistry: RuleRegistry = ruleRegistryInstance
 ): void =>
   chooseGovernmentFor(
     REVOLUTION,
     playerGovernment,
     GovernmentType,
     pendingEffects,
-    turn
+    turn,
+    ruleRegistry
   );
