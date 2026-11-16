@@ -8,6 +8,7 @@ import {
   Republic,
 } from '../Governments';
 import {
+  acceptRevolutionOffer,
   chooseGovernment,
   revolution,
   turnsUntilChoice,
@@ -244,6 +245,43 @@ describe('the revolution offer', (): void => {
     expect(offers).eql([]);
   });
 
+  it('starts Anarchy when the offer is accepted, even in the turn a government was chosen', (): void => {
+    const setup = setUp('person'),
+      { game, offers, playerGovernment, research } = setup;
+
+    research.addAdvance(MonarchyAdvance);
+    revolution(playerGovernment, game.pendingEffects, game.rules, game.turn);
+    while (
+      turnsUntilChoice(playerGovernment, game.pendingEffects, game.turn) !== 0
+    ) {
+      game.turn.increment();
+    }
+    chooseGovernment(
+      playerGovernment,
+      Monarchy,
+      game.pendingEffects,
+      game.turn,
+      game.rules
+    );
+
+    // In the same turn: the Republic's advance, and its offer, accepted.
+    offers.splice(0);
+    research.addAdvance(TheRepublic);
+    expect(offers).eql(['Republic']);
+
+    acceptRevolutionOffer(
+      playerGovernment,
+      game.pendingEffects,
+      game.rules,
+      game.turn
+    );
+
+    expect(playerGovernment.is(Anarchy)).true;
+    expect(
+      turnsUntilChoice(playerGovernment, game.pendingEffects, game.turn)
+    ).to.be.greaterThan(0);
+  });
+
   it('offers computer players too, for their client to decide', (): void => {
     const { offers, research } = setUp('computer');
 
@@ -298,7 +336,9 @@ describe('a change of government', (): void => {
     return {
       cities,
       cityBuilds,
+      interactionRegistry,
       ours,
+      ruleRegistry,
       player,
       playerGovernment: new PlayerGovernment(player, undefined, ruleRegistry),
       theirs,
@@ -350,10 +390,15 @@ describe('a change of government', (): void => {
         build: (Item: unknown): void => {
           built.push(Item);
         },
-      } as unknown as CityBuild;
+        _building: null as { item: () => unknown } | null,
+        // As `CityBuild#reprice`: prices whatever is being built, which here says what that is.
+        reprice(): void {
+          built.push(['repriced', this._building?.item()]);
+        },
+      };
 
     setup.cities.push(city);
-    setup.cityBuilds.push(cityBuild);
+    setup.cityBuilds.push(cityBuild as unknown as CityBuild);
 
     return { ...setup, built };
   };
@@ -366,7 +411,7 @@ describe('a change of government', (): void => {
     expect(built).eql([Rifleman]);
   });
 
-  it('leaves Fanatics under Fundamentalism, other production, and a city that cannot build Riflemen', (): void => {
+  it('leaves Fanatics under Fundamentalism, and other production', (): void => {
     expect(
       (() => {
         const { built, playerGovernment } = withBuilds('person', Fanatic, true);
@@ -390,20 +435,56 @@ describe('a change of government', (): void => {
         return built;
       })()
     ).eql([]);
+  });
 
-    expect(
-      (() => {
-        const { built, playerGovernment } = withBuilds(
-          'person',
-          Fanatic,
-          false
-        );
+  it("gives Riflemen to a city that couldn't choose them, as the original does", (): void => {
+    const { built, playerGovernment } = withBuilds('person', Fanatic, false);
 
-        playerGovernment.set(new Anarchy());
+    playerGovernment.set(new Anarchy());
 
-        return built;
-      })()
-    ).eql([]);
+    expect(built).eql([['repriced', Rifleman]]);
+  });
+
+  it('acts only on an actual change of government', (): void => {
+    const { built, playerGovernment, theirs } = withBuilds(
+      'computer',
+      Fanatic,
+      true
+    );
+
+    playerGovernment.set(new Monarchy());
+    expect(theirs.active()).false;
+
+    const { built: personBuilt, playerGovernment: personGovernment } =
+      withBuilds('person', Fanatic, true);
+
+    personGovernment.set(new Monarchy());
+    expect(personBuilt).eql([Rifleman]);
+
+    // The same government again: no vendetta ends, no production changes.
+    personBuilt.splice(0);
+    personGovernment.set(new Monarchy());
+    expect(personBuilt).eql([]);
+
+    const computer = withBuilds('computer', Fanatic, true);
+
+    computer.playerGovernment.set(new Monarchy());
+    expect(computer.theirs.active()).false;
+
+    computer.thirds.expire();
+    const again = new Vendetta(
+      computer.thirds.players()[0],
+      computer.player,
+      computer.ruleRegistry
+    );
+
+    computer.interactionRegistry.register(again);
+    computer.playerGovernment.set(new Monarchy());
+    expect(again.active()).true;
+
+    computer.playerGovernment.set(new Republic());
+    expect(again.active()).false;
+    expect(built).eql([]);
   });
 
   it("leaves a computer player's Fanatics, as the original does", (): void => {

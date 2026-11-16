@@ -20,13 +20,17 @@ under `civ2-government:` ids, with Civ2's numbers from OpenCiv2's reconstruction
   Monarchy only from Despotism, any other government unless the player is under it already, under Democracy or in
   Anarchy, and nothing while a revolution is under way (`GovernmentAvailable`, and a research `Complete` rule through
   `base-government-change`'s `offerGovernments`). The engine emits `player:government:available` with the player and
-  the government, and a client that accepts starts a revolution, so Anarchy. The original asks only a person; here
-  every player's client is told, and decides.
-- **A change of government** (`civ_set_government`):
+  the government. A client that accepts calls `lib/revolution`'s
+  `acceptRevolutionOffer(playerGovernment, pendingEffects, rules, turn)`, which always starts Anarchy, even in the
+  turn a government was chosen: the original sets Anarchy directly, never through the menu's re-choice. (Plain
+  `revolution` in that turn would skip Anarchy.) The original asks only a person; here every player's client is told,
+  and decides.
+- **A change of government** (`civ_set_government`), only when the government actually changes (the last one seen is
+  kept for each player; not saved, so a player's first change after a load counts as one):
   - entering Anarchy, or any change by a computer player, ends every other player's vendetta against that player
     (civ2-diplomacy's `clearVendettasAgainst`);
-  - a person's cities building Fanatics switch to Riflemen, shields kept, under any government but Fundamentalism. A
-    city that can't build Riflemen keeps the Fanatics for the build rules to deal with.
+  - a person's cities building Fanatics switch to Riflemen, shields kept, under any government but Fundamentalism,
+    whether or not the city could choose Riflemen, as in the original.
 - **Tables for the city rules** (they apply them with the `base-government-*` mechanisms):
   - `unitSupport`: `freeUnits(government, citySize)` (city size under Anarchy and Despotism; @COSMIC's 3, 3 and 8
     under Monarchy, Communism and Fundamentalism; none under the Republic and Democracy), `productionPerUnit` and
