@@ -8,6 +8,7 @@ import governmentChanged from './Rules/Player/government-changed';
 import mayRechoose from './Rules/Player/may-rechoose';
 import researchComplete from './Rules/Research/complete';
 import revolutionTerms from './Rules/Player/revolution-terms';
+import senateScandal from './Rules/Player/senate-scandal';
 import { Game, defaultGame } from '@civ-clone/core-game';
 
 export const register = (game: Game): void => {
@@ -35,6 +36,13 @@ export const register = (game: Game): void => {
       game.playerGovernments
     ),
     ...mayRechoose(game.clients),
+    ...senateScandal(
+      game.engine,
+      game.playerGovernments,
+      game.pendingEffects,
+      game.rules,
+      game.turn
+    ),
     ...governmentAvailable(game.playerGovernments),
     ...researchComplete(
       game.playerGovernments,

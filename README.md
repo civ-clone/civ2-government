@@ -25,6 +25,12 @@ under `civ2-government:` ids, with Civ2's numbers from OpenCiv2's reconstruction
   turn a government was chosen: the original sets Anarchy directly, never through the menu's re-choice. (Plain
   `revolution` in that turn would skip Anarchy.) The original asks only a person; here every player's client is told,
   and decides.
+- **A Senate scandal** (`civ_change_government(civ, 0)`, `diplomacy.cpp:5318`, `:6405`): civ2-diplomacy decides
+  whether a Republic or Democracy has one (after an espionage incident under a treaty, or refusing to withdraw from
+  another's land) and processes `SenateScandal`; this package's `civ2-government:player/senate-scandal/anarchy` rule
+  brings the government down into Anarchy as `acceptRevolutionOffer` does (until the next turn that is a multiple of 4,
+  even in a turn a government was chosen), and emits `civ2-government:senate-scandal` (player, other). Nothing happens
+  while a revolution is already under way.
 - **A change of government** (`civ_set_government`), only when the government actually changes (the last one seen is
   kept for each player, and filled in at each turn's start for a player from a loaded game):
   - entering Anarchy, or any change by a computer player, ends every other player's vendetta against that player
