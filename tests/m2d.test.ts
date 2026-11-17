@@ -53,6 +53,7 @@ import Vendetta from '@civ-clone/library-diplomacy/Declarations/Vendetta';
 import { expect } from 'chai';
 import governmentChanged from '../Rules/Player/government-changed';
 import register from '../registerRules';
+import SenateScandal from '@civ-clone/civ2-diplomacy/Rules/SenateScandal';
 
 const governments = [
   Anarchy,
@@ -653,5 +654,76 @@ describe('a change of government, with a real build and after a load', (): void 
 
     loaded.playerGovernment.set(new Republic());
     expect(vendetta.active()).false;
+  });
+});
+
+describe('a Senate scandal', (): void => {
+  // OpenCiv2 `civ_change_government(civ, 0)` (`diplomacy.cpp:5318`, `:6405`): whether there is a scandal is
+  //  civ2-diplomacy's `senateScandal`; the `SenateScandal` rule brings the government down.
+  [Democracy, Republic].forEach((GovernmentType) =>
+    it(`puts a ${GovernmentType.name} into Anarchy until the next fourth turn`, (): void => {
+      const setup = setUp('person'),
+        { game, player, playerGovernment } = setup,
+        other = new Player(game.rules),
+        scandals: Player[][] = [];
+
+      governedBy(setup, GovernmentType);
+      game.engine.on(
+        'civ2-government:senate-scandal',
+        (...players: Player[]): number => scandals.push(players)
+      );
+
+      game.rules.process(SenateScandal, player, other);
+
+      expect(playerGovernment.is(Anarchy)).true;
+      expect(scandals).eql([[player, other]]);
+      expect(
+        turnsUntilChoice(playerGovernment, game.pendingEffects, game.turn)
+      ).equal(4 - (game.turn.value() % 4));
+    })
+  );
+
+  it('falls even in the turn a government was chosen', (): void => {
+    const setup = setUp('person'),
+      { game, player, playerGovernment, research } = setup;
+
+    research.addAdvance(DemocracyAdvance);
+    revolution(playerGovernment, game.pendingEffects, game.rules, game.turn);
+    while (
+      turnsUntilChoice(playerGovernment, game.pendingEffects, game.turn) !== 0
+    ) {
+      game.turn.increment();
+    }
+    chooseGovernment(
+      playerGovernment,
+      Democracy,
+      game.pendingEffects,
+      game.turn,
+      game.rules
+    );
+
+    game.rules.process(SenateScandal, player, new Player(game.rules));
+
+    expect(playerGovernment.is(Anarchy)).true;
+  });
+
+  it('does nothing more while a revolution is under way', (): void => {
+    const setup = setUp('person'),
+      { game, player, playerGovernment } = setup;
+
+    governedBy(setup, Democracy);
+    revolution(playerGovernment, game.pendingEffects, game.rules, game.turn);
+
+    const due = turnsUntilChoice(
+      playerGovernment,
+      game.pendingEffects,
+      game.turn
+    );
+
+    game.rules.process(SenateScandal, player, new Player(game.rules));
+
+    expect(
+      turnsUntilChoice(playerGovernment, game.pendingEffects, game.turn)
+    ).equal(due);
   });
 });
