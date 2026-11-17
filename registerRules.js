@@ -8,6 +8,7 @@ const Requirements_1 = require("./Requirements");
 const availability_1 = require("./Rules/Governments/availability");
 const available_1 = require("./Rules/Governments/available");
 const government_changed_1 = require("./Rules/Player/government-changed");
+const terms_1 = require("./Rules/Government/terms");
 const may_rechoose_1 = require("./Rules/Player/may-rechoose");
 const complete_1 = require("./Rules/Research/complete");
 const revolution_terms_1 = require("./Rules/Player/revolution-terms");
@@ -18,7 +19,7 @@ const register = (game) => {
     // Which governments a player may choose, from the entries in `Requirements`, so a plugin can change an entry and its
     //  rule together.
     game.requirements.add((0, availability_1.deriveAvailabilityRules)(game.playerResearch), ...Requirements_1.default);
-    game.rules.register(...(0, government_changed_1.default)(game.engine, game.playerWorlds, game.interactions, game.clients, game.cities, game.cityBuilds, game.playerGovernments), ...(0, may_rechoose_1.default)(game.clients), ...(0, senate_scandal_1.default)(game.engine, game.playerGovernments, game.pendingEffects, game.rules, game.turn), ...(0, available_1.default)(game.playerGovernments), ...(0, complete_1.default)(game.playerGovernments, game.pendingEffects, game.rules, game.engine));
+    game.rules.register(...(0, government_changed_1.default)(game.engine, game.playerWorlds, game.interactions, game.clients, game.cities, game.cityBuilds, game.playerGovernments), ...(0, may_rechoose_1.default)(game.clients), ...(0, senate_scandal_1.default)(game.engine, game.playerGovernments, game.pendingEffects, game.rules, game.turn), ...(0, available_1.default)(game.playerGovernments), ...(0, terms_1.default)(), ...(0, complete_1.default)(game.playerGovernments, game.pendingEffects, game.rules, game.engine));
     // Last, so no other rule moves in the order rules run.
     game.rules.register(...(0, revolution_terms_1.default)());
 };

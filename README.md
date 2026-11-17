@@ -47,6 +47,10 @@ under `civ2-government:` ids, with Civ2's numbers from OpenCiv2's reconstruction
   - `militaryUnhappiness`: `militaryUnhappinessTable` (Republic 1, Democracy 2), `freeAggressiveUnits` (the
     Republic's first) and `policeStationExemption`.
   - The tile penalty and trade bonus are `civ2-world`'s (`lib/governmentTileYield`).
+- **Terms for players to compare** (`Rules/Government/terms`): the same tables as base-government-terms'
+  `GovernmentTerms`, one answer per government (free units, a shield a unit past them, martial law, military
+  unhappiness, Fundamentalism's content citizens and @COSMIC's science loss), for a computer player choosing its
+  government. No rule here asks them.
 
 ## Elsewhere
 

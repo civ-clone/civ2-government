@@ -5,6 +5,7 @@ import availability from './Requirements';
 import { deriveAvailabilityRules } from './Rules/Governments/availability';
 import governmentAvailable from './Rules/Governments/available';
 import governmentChanged from './Rules/Player/government-changed';
+import governmentTerms from './Rules/Government/terms';
 import mayRechoose from './Rules/Player/may-rechoose';
 import researchComplete from './Rules/Research/complete';
 import revolutionTerms from './Rules/Player/revolution-terms';
@@ -44,6 +45,7 @@ export const register = (game: Game): void => {
       game.turn
     ),
     ...governmentAvailable(game.playerGovernments),
+    ...governmentTerms(),
     ...researchComplete(
       game.playerGovernments,
       game.pendingEffects,

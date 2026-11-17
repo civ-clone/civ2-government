@@ -44,6 +44,7 @@
     "@civ-clone/base-government-martial-law": "^0.1.0",
     "@civ-clone/base-government-military-unhappiness": "^0.1.0",
     "@civ-clone/base-government-monarchy": "^0.1.0",
+    "@civ-clone/base-government-terms": "github:civ-clone/base-government-terms#feat/initial",
     "@civ-clone/base-government-republic": "^0.1.0",
     "@civ-clone/base-player-action-choose-government": "^0.1.0",
     "@civ-clone/base-player-action-revolution": "^0.1.1",
